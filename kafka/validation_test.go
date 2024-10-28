@@ -1,4 +1,3 @@
-// kafka/kafka_test.go
 package kafka
 
 import (
