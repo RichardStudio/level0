@@ -10,10 +10,10 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
-func ConsumeKafkaMessages(dbClient *database.DatabaseClient) {
+func ConsumeKafkaMessages(dbClient *database.DatabaseClient, broker string, topic string) {
 	r := kafka.NewReader(kafka.ReaderConfig{
-		Brokers: []string{"localhost:9092"},
-		Topic:   "orders",
+		Brokers: []string{broker},
+		Topic:   topic,
 		GroupID: "order_service_group",
 	})
 
@@ -35,19 +35,15 @@ func ConsumeKafkaMessages(dbClient *database.DatabaseClient) {
 			continue
 		}
 
-		database.Cache[order.OrderUID] = order
+		database.Cache.Add(order)
 		dbClient.SaveOrder(order)
 	}
 }
 
 func isOrderComplete(order models.Order) bool {
-	// Проверяем все поля
-	return order.OrderUID != "" && order.TrackNumber != "" && order.Entry != "" &&
-		order.Delivery.Name != "" && order.Delivery.Phone != "" && order.Delivery.Zip != "" &&
-		order.Delivery.City != "" && order.Delivery.Address != "" && order.Delivery.Region != "" &&
-		order.Delivery.Email != "" && order.Payment.Transaction != "" && order.Payment.Currency != "" &&
-		order.Payment.Provider != "" && order.Payment.Amount != 0 && order.Payment.PaymentDt != 0 &&
-		order.Payment.Bank != "" && order.Payment.DeliveryCost != 0 && order.Payment.GoodsTotal != 0 &&
-		len(order.Items) > 0 && order.Locale != "" && order.CustomerID != "" && order.DeliveryService != "" &&
-		order.Shardkey != "" && order.SmID != 0 && !order.DateCreated.IsZero() && order.OofShard != ""
+	err := order.Validate()
+	if err != nil {
+		log.Printf("Error validating order: %v", err)
+	}
+	return err == nil
 }

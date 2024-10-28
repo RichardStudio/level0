@@ -23,7 +23,7 @@ type DatabaseConfig struct {
 	DBName   string
 }
 
-var Cache = make(map[string]models.Order)
+var Cache = NewMyCache()
 var once sync.Once
 var dbError error
 var dbClient *DatabaseClient
@@ -95,7 +95,7 @@ func (c *DatabaseClient) RestoreCacheFromDB() {
 			return
 		}
 
-		Cache[order.OrderUID] = order
+		Cache.Add(order)
 		log.Println("successfully restored from db")
 	}
 }
@@ -135,5 +135,6 @@ func (c *DatabaseClient) SaveOrder(order models.Order) {
 	if err != nil {
 		log.Printf("Error inserting/updating order in DB: %v", err)
 	}
+	Cache.Add(order)
 	log.Println("successfully inserted order into DB")
 }

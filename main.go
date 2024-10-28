@@ -1,8 +1,11 @@
 package main
 
 import (
+	"github.com/joho/godotenv"
 	"log"
 	"net/http"
+	"os"
+	"strconv"
 
 	"github.com/gorilla/mux"
 	"level0/database"
@@ -11,16 +14,21 @@ import (
 )
 
 func CreateDbConfig() database.DatabaseConfig {
+	port, err := strconv.Atoi(os.Getenv("DB_PORT"))
+	if err != nil {
+		log.Fatalf("Invalid port: %v", err)
+	}
 	return database.DatabaseConfig{
-		Host:     "localhost",
-		Port:     5432,
-		User:     "postgres",
-		Password: "20042001",
-		DBName:   "orders",
+		Host:     os.Getenv("DB_HOST"),
+		Port:     port,
+		User:     os.Getenv("DB_USER"),
+		Password: os.Getenv("DB_PASSWORD"),
+		DBName:   os.Getenv("DB_NAME"),
 	}
 }
 
 func main() {
+	err := godotenv.Load("config.env")
 	client, err := database.NewClient(CreateDbConfig())
 	if err != nil {
 		log.Fatal(err)
@@ -29,7 +37,9 @@ func main() {
 
 	client.RestoreCacheFromDB()
 
-	go kafka.ConsumeKafkaMessages(client)
+	kafkaBroker := os.Getenv("KAFKA_BROKER")
+	kafkaTopic := os.Getenv("KAFKA_TOPIC")
+	go kafka.ConsumeKafkaMessages(client, kafkaBroker, kafkaTopic)
 
 	r := mux.NewRouter()
 	r.HandleFunc("/orders/{id}", handlers.GetOrder).Methods("GET")

@@ -12,8 +12,8 @@ func GetOrder(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 
-	order, exists := database.Cache[id]
-	if !exists {
+	order, err := database.Cache.Get(id)
+	if err != nil {
 		http.Error(w, "Order not found", http.StatusNotFound)
 		return
 	}
